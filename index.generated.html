@@ -1,0 +1,2117 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="night">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="md2html是一款可以将markdown文档一键转为HTML网页的工具，进一步方便阅读md文档，支持多种md格式：加粗、斜体、行内代码、代码块、引用、列表、表格、图片等。"
+    />
+    <meta name="theme-color" content="#0b151a" />
+    <title>markdown转网页 · 静谧书房</title>
+    <style>
+      :root {
+        --ink: #252b2c;
+        --muted: #737977;
+        --paper: #f7f6f1;
+        --paper-deep: #eeece4;
+        --page: #fffefa;
+        --night: #12262e;
+        --night-soft: #1c353e;
+        --gold: #b39762;
+        --gold-dark: #806a43;
+        --line: #deddd5;
+        --sidebar-width: 316px;
+        --header-height: 72px;
+        --reader-width: 720px;
+        --font-size: 19px;
+        --line-height: 2.05;
+        --serif:
+          "Noto Serif SC", "Source Han Serif SC", "Songti SC", "STSong",
+          "SimSun", serif;
+        --sans: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+        color-scheme: light;
+      }
+
+      [data-theme="night"] {
+        --ink: #d6d9d5;
+        --muted: #8e9b9b;
+        --paper: #101b20;
+        --paper-deep: #15242a;
+        --page: #142128;
+        --night: #0b151a;
+        --night-soft: #203740;
+        --gold: #bfa574;
+        --gold-dark: #c5ae7d;
+        --line: #2c3b40;
+        color-scheme: dark;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+      html {
+        scroll-behavior: smooth;
+        scroll-padding-top: calc(var(--header-height) + 28px);
+      }
+      body {
+        margin: 0;
+        background: var(--paper);
+        color: var(--ink);
+        font-family: var(--sans);
+        -webkit-font-smoothing: antialiased;
+        transition:
+          background-color 0.25s,
+          color 0.25s;
+      }
+      body.no-scroll {
+        overflow: hidden;
+      }
+      button,
+      input {
+        font: inherit;
+      }
+      button {
+        color: inherit;
+      }
+      button,
+      a {
+        -webkit-tap-highlight-color: transparent;
+      }
+      button {
+        cursor: pointer;
+      }
+      button:focus-visible,
+      a:focus-visible,
+      input:focus-visible {
+        outline: 2px solid var(--gold);
+        outline-offset: 4px;
+      }
+      ::selection {
+        background: #dbc9a6;
+        color: #1b292e;
+      }
+      .svg-library {
+        position: absolute;
+        width: 0;
+        height: 0;
+        overflow: hidden;
+      }
+      .icon {
+        width: 20px;
+        height: 20px;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 1.65;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        flex: 0 0 auto;
+      }
+      .skip-link {
+        position: fixed;
+        left: 16px;
+        top: -60px;
+        z-index: 100;
+        background: var(--page);
+        padding: 12px 18px;
+        color: var(--ink);
+      }
+      .skip-link:focus {
+        top: 12px;
+      }
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+      }
+
+      .reading-progress {
+        position: fixed;
+        z-index: 60;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background: transparent;
+      }
+      .reading-progress span {
+        display: block;
+        width: 0;
+        height: 100%;
+        background: var(--gold);
+        transition: width 0.08s linear;
+      }
+
+      .topbar {
+        height: var(--header-height);
+        position: fixed;
+        inset: 0 0 auto;
+        z-index: 50;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 28px;
+        background: color-mix(in srgb, var(--paper) 92%, transparent);
+        border-bottom: 1px solid var(--line);
+        backdrop-filter: blur(18px);
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        border: 0;
+        background: none;
+        padding: 0;
+        text-align: left;
+      }
+      .brand-mark {
+        width: 36px;
+        height: 36px;
+        display: grid;
+        place-items: center;
+        background: var(--night);
+        color: #e1cda5;
+      }
+      .brand-mark .icon {
+        width: 21px;
+        height: 21px;
+      }
+      .brand-copy {
+        display: grid;
+        gap: 2px;
+      }
+      .brand-copy strong {
+        font-family: var(--serif);
+        font-size: 16px;
+        letter-spacing: 0.12em;
+        font-weight: 600;
+      }
+      .brand-copy small {
+        color: var(--muted);
+        font-size: 10px;
+        letter-spacing: 0.18em;
+      }
+      .top-actions {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+      }
+      .icon-button,
+      .text-button {
+        border: 1px solid transparent;
+        background: transparent;
+        min-height: 40px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        transition:
+          background 0.18s,
+          border-color 0.18s;
+      }
+      .icon-button {
+        width: 40px;
+      }
+      .text-button {
+        padding: 0 13px;
+        font-size: 13px;
+      }
+      .icon-button:hover,
+      .text-button:hover {
+        background: var(--paper-deep);
+        border-color: var(--line);
+      }
+      .search-trigger {
+        border-color: var(--line);
+        margin-right: 8px;
+        color: var(--muted);
+        min-width: 164px;
+        justify-content: flex-start;
+      }
+      .search-trigger kbd {
+        margin-left: auto;
+        font-family: var(--sans);
+        font-size: 10px;
+        border: 1px solid var(--line);
+        padding: 1px 5px;
+        color: var(--muted);
+      }
+      .mobile-menu {
+        display: none;
+      }
+
+      .sidebar {
+        position: fixed;
+        z-index: 40;
+        left: 0;
+        top: var(--header-height);
+        bottom: 0;
+        width: var(--sidebar-width);
+        background: var(--night);
+        color: #d9dfdc;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+      .sidebar::after {
+        content: "";
+        position: absolute;
+        right: 0;
+        top: 0;
+        bottom: 0;
+        width: 1px;
+        background: rgba(210, 190, 150, 0.16);
+        pointer-events: none;
+      }
+      .book-intro {
+        padding: 35px 30px 26px;
+      }
+      .eyebrow {
+        color: #c2ab7e;
+        font-size: 11px;
+        letter-spacing: 0.25em;
+      }
+      .book-intro h2 {
+        margin: 17px 0 14px;
+        font-family: var(--serif);
+        font-weight: 500;
+        font-size: 25px;
+        line-height: 1.55;
+        letter-spacing: 0.08em;
+        color: #f2eee4;
+      }
+      .book-intro p {
+        margin: 0;
+        max-width: 220px;
+        color: #93a5a7;
+        font-family: var(--serif);
+        font-size: 13px;
+        line-height: 1.9;
+      }
+      .book-meta {
+        display: flex;
+        gap: 20px;
+        padding: 18px 30px;
+        border-top: 1px solid rgba(255, 255, 255, 0.08);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      }
+      .book-meta span {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        color: #a9b6b5;
+        font-size: 11px;
+      }
+      .book-meta .icon {
+        width: 15px;
+        height: 15px;
+        color: #bda779;
+      }
+      .toc-heading {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 23px 30px 12px;
+        color: #c5ceca;
+        font-size: 12px;
+        letter-spacing: 0.15em;
+      }
+      .toc-heading small {
+        color: #748b8e;
+        font-size: 10px;
+        letter-spacing: 0.05em;
+      }
+      .toc {
+        list-style: none;
+        padding: 0 16px 22px;
+        margin: 0;
+        overflow-y: auto;
+        scrollbar-width: thin;
+        scrollbar-color: #385058 transparent;
+      }
+      .toc button {
+        width: 100%;
+        border: 0;
+        border-left: 2px solid transparent;
+        background: transparent;
+        color: #9badae;
+        text-align: left;
+        display: grid;
+        grid-template-columns: 30px 1fr;
+        gap: 10px;
+        padding: 15px 14px;
+        position: relative;
+        transition:
+          background 0.18s,
+          color 0.18s;
+      }
+      .toc button:hover {
+        background: rgba(255, 255, 255, 0.045);
+        color: #e4e8e3;
+      }
+      .toc button[aria-current="page"] {
+        background: var(--night-soft);
+        color: #f4efe4;
+        border-left-color: var(--gold);
+      }
+      .toc-number {
+        color: #778f92;
+        font-family: Georgia, serif;
+        font-size: 12px;
+        padding-top: 3px;
+      }
+      .toc button[aria-current="page"] .toc-number {
+        color: #c5ac79;
+      }
+      .toc-title {
+        display: block;
+        font-family: var(--serif);
+        font-size: 14px;
+        line-height: 1.55;
+      }
+      .toc-day {
+        display: block;
+        margin-top: 6px;
+        color: #71888c;
+        font-size: 10px;
+        letter-spacing: 0.1em;
+      }
+      .sidebar-foot {
+        margin-top: auto;
+        padding: 19px 30px;
+        border-top: 1px solid rgba(255, 255, 255, 0.08);
+        color: #73898c;
+        font-size: 10px;
+        line-height: 1.8;
+      }
+
+      .main {
+        margin-left: var(--sidebar-width);
+        padding-top: var(--header-height);
+        min-height: 100vh;
+      }
+      .reader {
+        width: min(calc(100% - 80px), calc(var(--reader-width) + 112px));
+        margin: 0 auto;
+        padding: 66px 56px 0;
+      }
+      .chapter-head {
+        text-align: center;
+        margin-bottom: 54px;
+        position: relative;
+      }
+      .chapter-seal {
+        width: 46px;
+        height: 46px;
+        margin: 0 auto 23px;
+        border: 1px solid var(--gold);
+        color: var(--gold-dark);
+        display: grid;
+        place-items: center;
+        transform: rotate(45deg);
+      }
+      .chapter-seal span {
+        transform: rotate(-45deg);
+        font-family: var(--serif);
+        font-size: 17px;
+      }
+      .chapter-kicker {
+        color: var(--gold-dark);
+        font-size: 11px;
+        letter-spacing: 0.3em;
+        margin-bottom: 16px;
+      }
+      .chapter-head h1 {
+        margin: 0 auto;
+        max-width: 680px;
+        font-family: var(--serif);
+        font-size: clamp(28px, 3vw, 39px);
+        font-weight: 600;
+        line-height: 1.5;
+        letter-spacing: 0.06em;
+        text-wrap: balance;
+      }
+      .chapter-subline {
+        margin-top: 21px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 14px;
+        color: var(--muted);
+        font-size: 11px;
+      }
+      .chapter-subline i {
+        width: 3px;
+        height: 3px;
+        border-radius: 50%;
+        background: var(--gold);
+      }
+      .chapter-rule {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        width: 140px;
+        margin: 28px auto 0;
+        color: var(--gold);
+      }
+      .chapter-rule::before,
+      .chapter-rule::after {
+        content: "";
+        height: 1px;
+        flex: 1;
+        background: var(--line);
+      }
+      .chapter-rule .icon {
+        width: 15px;
+        height: 15px;
+      }
+
+      .article {
+        font-family: var(--serif);
+        font-size: var(--font-size);
+        line-height: var(--line-height);
+        letter-spacing: 0.035em;
+      }
+      .article p {
+        margin: 0 0 1.25em;
+        text-align: justify;
+        text-justify: inter-ideograph;
+        overflow-wrap: anywhere;
+      }
+      .article > p:first-of-type:not(.dialogue)::first-letter {
+        float: left;
+        font-size: 3.1em;
+        line-height: 0.9;
+        padding: 0.12em 0.15em 0 0;
+        color: var(--gold-dark);
+        font-weight: 500;
+      }
+      .article h2,
+      .article h3,
+      .article h4 {
+        font-weight: 600;
+        line-height: 1.6;
+        margin: 2.2em 0 1em;
+      }
+      .article h2 {
+        font-size: 1.4em;
+      }
+      .article h3 {
+        font-size: 1.2em;
+      }
+      .article blockquote {
+        margin: 2em 0;
+        padding: 0.2em 0 0.2em 1.4em;
+        border-left: 2px solid var(--gold);
+        color: var(--muted);
+      }
+      .article ul,
+      .article ol {
+        padding-left: 1.5em;
+        margin-bottom: 1.4em;
+      }
+      .article li {
+        margin: 0.5em 0;
+      }
+      .article hr {
+        border: 0;
+        width: 80px;
+        border-top: 1px solid var(--gold);
+        margin: 3em auto;
+      }
+      .article code {
+        font-family: ui-monospace, monospace;
+        font-size: 0.88em;
+        background: var(--paper-deep);
+        padding: 0.12em 0.35em;
+      }
+      .article pre {
+        overflow-x: auto;
+        background: var(--paper-deep);
+        padding: 20px;
+        line-height: 1.7;
+        margin-bottom: 1.5em;
+      }
+      .article pre code {
+        background: none;
+        padding: 0;
+      }
+      .article a {
+        color: var(--gold-dark);
+        text-underline-offset: 4px;
+      }
+      .article img {
+        max-width: 100%;
+        height: auto;
+        display: block;
+        margin: 1.6em auto;
+        border: 1px solid var(--line);
+      }
+      .table-wrap {
+        overflow-x: auto;
+        margin-bottom: 1.6em;
+      }
+      .article table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.92em;
+        line-height: 1.7;
+      }
+      .article th,
+      .article td {
+        border: 1px solid var(--line);
+        padding: 10px 14px;
+        text-align: left;
+        vertical-align: top;
+      }
+      .article th {
+        background: var(--paper-deep);
+        font-weight: 600;
+      }
+      .article em {
+        font-style: italic;
+      }
+      .article strong {
+        font-weight: 700;
+      }
+      .article mark {
+        background: #f0d998;
+        color: #222;
+        padding: 0 0.08em;
+      }
+      .chapter-end {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 15px;
+        color: var(--gold-dark);
+        margin: 48px 0 54px;
+      }
+      .chapter-end::before,
+      .chapter-end::after {
+        content: "";
+        width: 44px;
+        height: 1px;
+        background: var(--line);
+      }
+      .chapter-end span {
+        font-family: var(--serif);
+        font-size: 12px;
+        letter-spacing: 0.25em;
+      }
+
+      .chapter-nav {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        border-top: 1px solid var(--line);
+        border-bottom: 1px solid var(--line);
+      }
+      .chapter-nav button {
+        border: 0;
+        background: transparent;
+        padding: 25px 0;
+        text-align: left;
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        min-width: 0;
+      }
+      .chapter-nav button.next {
+        text-align: right;
+        justify-content: flex-end;
+      }
+      .chapter-nav button:disabled {
+        opacity: 0.28;
+        cursor: default;
+      }
+      .chapter-nav button:not(:disabled):hover .nav-title {
+        color: var(--gold-dark);
+      }
+      .nav-copy {
+        min-width: 0;
+      }
+      .nav-label {
+        display: block;
+        color: var(--muted);
+        font-size: 10px;
+        letter-spacing: 0.15em;
+        margin-bottom: 7px;
+      }
+      .nav-title {
+        display: block;
+        font-family: var(--serif);
+        font-size: 14px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        transition: color 0.18s;
+      }
+      .reader-footer {
+        text-align: center;
+        padding: 30px 0 45px;
+        color: var(--muted);
+        font-size: 10px;
+        letter-spacing: 0.1em;
+      }
+
+      .floating-tools {
+        position: fixed;
+        right: 26px;
+        bottom: 27px;
+        display: grid;
+        gap: 8px;
+        z-index: 20;
+      }
+      .float-button {
+        width: 43px;
+        height: 43px;
+        border: 1px solid var(--line);
+        background: color-mix(in srgb, var(--page) 92%, transparent);
+        backdrop-filter: blur(10px);
+        display: grid;
+        place-items: center;
+        box-shadow: 0 5px 24px rgba(20, 32, 35, 0.06);
+      }
+      .float-button:hover {
+        border-color: var(--gold);
+        color: var(--gold-dark);
+      }
+      #backTop {
+        opacity: 0;
+        pointer-events: none;
+        transform: translateY(6px);
+        transition:
+          opacity 0.2s,
+          transform 0.2s;
+      }
+      #backTop.visible {
+        opacity: 1;
+        pointer-events: auto;
+        transform: none;
+      }
+
+      .popover {
+        position: fixed;
+        z-index: 70;
+        top: 64px;
+        right: 24px;
+        width: 290px;
+        padding: 23px;
+        background: var(--page);
+        border: 1px solid var(--line);
+        box-shadow: 0 18px 60px rgba(9, 25, 30, 0.16);
+      }
+      .popover[hidden] {
+        display: none;
+      }
+      .popover-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 22px;
+      }
+      .popover-head h2 {
+        margin: 0;
+        font-family: var(--serif);
+        font-size: 17px;
+        font-weight: 600;
+      }
+      .popover-head button {
+        width: 30px;
+        min-height: 30px;
+      }
+      .setting-row {
+        margin-top: 19px;
+      }
+      .setting-label {
+        display: flex;
+        justify-content: space-between;
+        color: var(--muted);
+        font-size: 12px;
+        margin-bottom: 10px;
+      }
+      .segmented {
+        display: grid;
+        grid-auto-flow: column;
+        grid-auto-columns: 1fr;
+        border: 1px solid var(--line);
+        padding: 3px;
+      }
+      .segmented button {
+        border: 0;
+        background: transparent;
+        min-height: 34px;
+        font-size: 12px;
+      }
+      .segmented button.active {
+        background: var(--night);
+        color: #eee7d9;
+      }
+      .font-controls {
+        display: grid;
+        grid-template-columns: 42px 1fr 42px;
+        align-items: center;
+        border: 1px solid var(--line);
+      }
+      .font-controls button {
+        height: 38px;
+        border: 0;
+        background: transparent;
+        display: grid;
+        place-items: center;
+      }
+      .font-controls button:hover {
+        background: var(--paper-deep);
+      }
+      .font-controls output {
+        text-align: center;
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .setting-note {
+        margin: 22px 0 0;
+        padding-top: 15px;
+        border-top: 1px solid var(--line);
+        color: var(--muted);
+        font-size: 10px;
+        line-height: 1.7;
+      }
+
+      .modal-backdrop {
+        position: fixed;
+        inset: 0;
+        z-index: 80;
+        background: rgba(5, 18, 23, 0.62);
+        backdrop-filter: blur(6px);
+        display: grid;
+        place-items: start center;
+        padding: 12vh 20px 30px;
+      }
+      .modal-backdrop[hidden] {
+        display: none;
+      }
+      .search-modal {
+        width: min(650px, 100%);
+        max-height: 72vh;
+        background: var(--page);
+        border: 1px solid var(--line);
+        box-shadow: 0 24px 90px rgba(0, 0, 0, 0.25);
+        display: flex;
+        flex-direction: column;
+      }
+      .search-input-wrap {
+        display: flex;
+        align-items: center;
+        gap: 13px;
+        padding: 17px 20px;
+        border-bottom: 1px solid var(--line);
+      }
+      .search-input-wrap .icon {
+        color: var(--gold-dark);
+      }
+      .search-input-wrap input {
+        flex: 1;
+        min-width: 0;
+        border: 0;
+        outline: 0;
+        background: transparent;
+        color: var(--ink);
+        font-size: 16px;
+      }
+      .search-input-wrap input::placeholder {
+        color: var(--muted);
+      }
+      .key-button {
+        border: 1px solid var(--line);
+        background: transparent;
+        color: var(--muted);
+        font-size: 10px;
+        padding: 4px 7px;
+      }
+      .search-status {
+        padding: 13px 20px 8px;
+        color: var(--muted);
+        font-size: 11px;
+      }
+      .search-results {
+        overflow-y: auto;
+        padding: 5px 10px 13px;
+      }
+      .search-result {
+        width: 100%;
+        display: block;
+        text-align: left;
+        border: 0;
+        border-top: 1px solid var(--line);
+        background: transparent;
+        padding: 15px 12px;
+      }
+      .search-result:hover,
+      .search-result.active {
+        background: var(--paper-deep);
+      }
+      .result-chapter {
+        display: block;
+        color: var(--gold-dark);
+        font-size: 10px;
+        margin-bottom: 7px;
+      }
+      .result-text {
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        font-family: var(--serif);
+        font-size: 14px;
+        line-height: 1.8;
+      }
+      .result-text mark {
+        background: none;
+        color: var(--gold-dark);
+        font-weight: 700;
+      }
+      .search-empty {
+        text-align: center;
+        padding: 42px 20px;
+        color: var(--muted);
+        font-family: var(--serif);
+        font-size: 14px;
+        line-height: 2;
+      }
+      .search-empty .icon {
+        display: block;
+        width: 30px;
+        height: 30px;
+        margin: 0 auto 12px;
+        color: var(--gold);
+      }
+
+      .toast {
+        position: fixed;
+        left: calc(50% + var(--sidebar-width) / 2);
+        bottom: 30px;
+        transform: translate(-50%, 15px);
+        z-index: 100;
+        background: var(--night);
+        color: #eee9dc;
+        padding: 12px 19px;
+        font-size: 12px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.16);
+        opacity: 0;
+        pointer-events: none;
+        transition:
+          opacity 0.2s,
+          transform 0.2s;
+      }
+      .toast.show {
+        opacity: 1;
+        transform: translate(-50%, 0);
+      }
+      .sidebar-backdrop {
+        display: none;
+      }
+
+      @media (min-width: 1500px) {
+        :root {
+          --sidebar-width: 340px;
+        }
+        .reader {
+          padding-top: 78px;
+        }
+      }
+      @media (max-width: 1050px) {
+        :root {
+          --sidebar-width: 280px;
+        }
+        .book-intro {
+          padding-left: 24px;
+          padding-right: 24px;
+        }
+        .book-intro h2 {
+          font-size: 22px;
+        }
+        .reader {
+          width: calc(100% - 40px);
+          padding-left: 25px;
+          padding-right: 25px;
+        }
+        .search-trigger {
+          min-width: 40px;
+          width: 40px;
+          padding: 0;
+          justify-content: center;
+        }
+        .search-trigger span,
+        .search-trigger kbd {
+          display: none;
+        }
+      }
+      @media (max-width: 760px) {
+        :root {
+          --header-height: 62px;
+          --font-size: 18px;
+        }
+        .topbar {
+          padding: 0 14px;
+        }
+        .mobile-menu {
+          display: inline-flex;
+        }
+        .brand-copy small,
+        .import-label {
+          display: none;
+        }
+        .brand {
+          gap: 9px;
+        }
+        .brand-mark {
+          width: 32px;
+          height: 32px;
+        }
+        .brand-copy strong {
+          font-size: 14px;
+          letter-spacing: 0.05em;
+        }
+        .top-actions {
+          gap: 1px;
+        }
+        .search-trigger {
+          margin: 0;
+          border-color: transparent;
+        }
+        .sidebar {
+          top: 0;
+          width: min(340px, 88vw);
+          transform: translateX(-102%);
+          transition: transform 0.25s ease;
+          z-index: 90;
+        }
+        .sidebar.open {
+          transform: none;
+        }
+        .sidebar-backdrop {
+          display: block;
+          position: fixed;
+          inset: 0;
+          z-index: 85;
+          background: rgba(4, 17, 22, 0.58);
+        }
+        .sidebar-backdrop[hidden] {
+          display: none;
+        }
+        .book-intro {
+          padding-top: 32px;
+        }
+        .main {
+          margin-left: 0;
+        }
+        .reader {
+          width: 100%;
+          padding: 40px 24px 0;
+        }
+        .chapter-head {
+          margin-bottom: 38px;
+        }
+        .chapter-seal {
+          width: 38px;
+          height: 38px;
+          margin-bottom: 20px;
+        }
+        .chapter-seal span {
+          font-size: 14px;
+        }
+        .chapter-head h1 {
+          font-size: 27px;
+          letter-spacing: 0.03em;
+        }
+        .chapter-kicker {
+          font-size: 10px;
+        }
+        .article {
+          letter-spacing: 0.02em;
+        }
+        .article p {
+          margin-bottom: 1.15em;
+        }
+        .chapter-nav {
+          margin: 0 -24px;
+          padding: 0 18px;
+        }
+        .chapter-nav button {
+          padding: 20px 0;
+          gap: 8px;
+        }
+        .chapter-nav .icon {
+          width: 17px;
+        }
+        .nav-title {
+          max-width: 125px;
+          font-size: 12px;
+        }
+        .floating-tools {
+          right: 14px;
+          bottom: 18px;
+        }
+        .float-button {
+          width: 40px;
+          height: 40px;
+        }
+        .popover {
+          top: 58px;
+          right: 12px;
+          width: min(290px, calc(100vw - 24px));
+        }
+        .modal-backdrop {
+          padding: 8vh 12px 20px;
+        }
+        .toast {
+          left: 50%;
+          width: max-content;
+          max-width: calc(100vw - 32px);
+          text-align: center;
+        }
+      }
+      @media (max-width: 390px) {
+        .brand-copy {
+          display: none;
+        }
+        .reader {
+          padding-left: 20px;
+          padding-right: 20px;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          scroll-behavior: auto !important;
+          transition-duration: 0.01ms !important;
+        }
+      }
+      @media print {
+        .topbar,
+        .sidebar,
+        .floating-tools,
+        .chapter-nav,
+        .reader-footer,
+        .reading-progress {
+          display: none !important;
+        }
+        .main {
+          margin: 0;
+          padding: 0;
+        }
+        .reader {
+          width: 100%;
+          padding: 0;
+        }
+        body,
+        .page {
+          background: white;
+          color: black;
+        }
+        .article {
+          font-size: 12pt;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <svg
+      class="svg-library"
+      aria-hidden="true"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <symbol id="i-book" viewBox="0 0 24 24">
+        <path
+          d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5v14Z"
+        />
+        <path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5M8 7h8M8 11h6" />
+      </symbol>
+      <symbol id="i-search" viewBox="0 0 24 24">
+        <circle cx="11" cy="11" r="7" />
+        <path d="m20 20-4-4" />
+      </symbol>
+      <symbol id="i-settings" viewBox="0 0 24 24">
+        <path d="M4 6h8M16 6h4M4 12h3M11 12h9M4 18h10M18 18h2" />
+        <circle cx="14" cy="6" r="2" />
+        <circle cx="9" cy="12" r="2" />
+        <circle cx="16" cy="18" r="2" />
+      </symbol>
+      <symbol id="i-sun" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="4" />
+        <path
+          d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.66 6.34l1.41-1.41"
+        />
+      </symbol>
+      <symbol id="i-moon" viewBox="0 0 24 24">
+        <path d="M20.5 14.2A8.5 8.5 0 0 1 9.8 3.5 8.5 8.5 0 1 0 20.5 14.2Z" />
+      </symbol>
+      <symbol id="i-upload" viewBox="0 0 24 24">
+        <path d="M12 16V3M7 8l5-5 5 5M5 14v6h14v-6" />
+      </symbol>
+      <symbol id="i-menu" viewBox="0 0 24 24">
+        <path d="M4 6h16M4 12h16M4 18h16" />
+      </symbol>
+      <symbol id="i-close" viewBox="0 0 24 24">
+        <path d="m6 6 12 12M18 6 6 18" />
+      </symbol>
+      <symbol id="i-left" viewBox="0 0 24 24">
+        <path d="m15 18-6-6 6-6" />
+      </symbol>
+      <symbol id="i-right" viewBox="0 0 24 24">
+        <path d="m9 18 6-6-6-6" />
+      </symbol>
+      <symbol id="i-up" viewBox="0 0 24 24"><path d="m6 15 6-6 6 6" /></symbol>
+      <symbol id="i-clock" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="9" />
+        <path d="M12 7v5l3 2" />
+      </symbol>
+      <symbol id="i-file" viewBox="0 0 24 24">
+        <path d="M6 2h8l4 4v16H6zM14 2v5h5M9 12h6M9 16h6" />
+      </symbol>
+      <symbol id="i-diamond" viewBox="0 0 24 24">
+        <path d="m12 3 7 9-7 9-7-9z" />
+      </symbol>
+      <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14" /></symbol>
+      <symbol id="i-plus" viewBox="0 0 24 24">
+        <path d="M5 12h14M12 5v14" />
+      </symbol>
+      <symbol id="i-list" viewBox="0 0 24 24">
+        <path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01" />
+      </symbol>
+    </svg>
+
+    <a class="skip-link" href="#article">跳到正文</a>
+    <div class="reading-progress" aria-hidden="true">
+      <span id="progressBar"></span>
+    </div>
+
+    <header class="topbar">
+      <button class="brand" id="brandHome" aria-label="返回本章开头">
+        <span class="brand-mark"
+          ><svg class="icon"><use href="#i-book" /></svg
+        ></span>
+        <span class="brand-copy"
+          ><strong>静谧书房</strong><small>一个人的阅读时间</small></span
+        >
+      </button>
+      <div class="top-actions">
+        <button
+          class="icon-button mobile-menu"
+          id="menuButton"
+          aria-label="打开章节目录"
+          aria-expanded="false"
+        >
+          <svg class="icon"><use href="#i-menu" /></svg>
+        </button>
+        <button
+          class="text-button search-trigger"
+          id="searchButton"
+          aria-label="搜索全文"
+        >
+          <svg class="icon"><use href="#i-search" /></svg><span>搜索全文</span
+          ><kbd>Ctrl K</kbd>
+        </button>
+        <button
+          class="icon-button"
+          id="themeToggle"
+          aria-label="切换夜间模式"
+          title="切换夜间模式"
+        >
+          <svg class="icon"><use id="themeIcon" href="#i-moon" /></svg>
+        </button>
+        <button
+          class="icon-button"
+          id="settingsButton"
+          aria-label="阅读设置"
+          aria-expanded="false"
+          title="阅读设置"
+        >
+          <svg class="icon"><use href="#i-settings" /></svg>
+        </button>
+        <button
+          class="text-button"
+          id="importButton"
+          aria-label="导入 Markdown 文件"
+          title="导入 Markdown 文件"
+        >
+          <svg class="icon"><use href="#i-upload" /></svg
+          ><span class="import-label">导入</span>
+        </button>
+        <input
+          type="file"
+          id="fileInput"
+          accept=".md,.markdown,.txt,text/plain,text/markdown"
+          multiple
+          hidden
+        />
+      </div>
+    </header>
+
+    <aside class="sidebar" id="sidebar" aria-label="文档目录">
+      <div class="book-intro">
+        <span class="eyebrow">md2html</span>
+        <h2 id="bookTitle">markdown转网页</h2>
+        <p id="bookDescription">md2html是一款可以将markdown文档一键转为HTML网页的工具，进一步方便阅读md文档，支持多种md格式：加粗、斜体、行内代码、代码块、引用、列表、表格、图片等。</p>
+      </div>
+      <div class="book-meta">
+        <span
+          ><svg class="icon"><use href="#i-file" /></svg
+          ><b id="totalChapters">4</b>&nbsp;章</span
+        >
+        <span
+          ><svg class="icon"><use href="#i-clock" /></svg
+          ><b id="totalMinutes">70</b>&nbsp;分钟</span
+        >
+      </div>
+      <div class="toc-heading">
+        <span>章节目录</span><small id="tocRange"></small>
+      </div>
+      <ol class="toc" id="toc"></ol>
+      <div class="sidebar-foot">
+        字数统计不含空格与换行<br />阅读进度与设置仅保存在本机
+      </div>
+    </aside>
+    <div class="sidebar-backdrop" id="sidebarBackdrop" hidden></div>
+
+    <main class="main">
+      <div class="reader">
+        <header class="chapter-head">
+          <div class="chapter-seal" aria-hidden="true">
+            <span id="chapterSeal">壹</span>
+          </div>
+          <div class="chapter-kicker" id="chapterKicker">第一天</div>
+          <h1 id="chapterTitle"></h1>
+          <div class="chapter-subline">
+            <span id="chapterWords"></span><i></i><span id="chapterTime"></span>
+          </div>
+          <div class="chapter-rule">
+            <svg class="icon"><use href="#i-diamond" /></svg>
+          </div>
+        </header>
+        <article class="article" id="article" aria-live="polite"></article>
+        <div class="chapter-end"><span>本章完</span></div>
+        <nav class="chapter-nav" aria-label="章节导航">
+          <button id="prevChapter">
+            <svg class="icon"><use href="#i-left" /></svg
+            ><span class="nav-copy"
+              ><span class="nav-label">上一章</span
+              ><span class="nav-title" id="prevTitle"></span
+            ></span>
+          </button>
+          <button class="next" id="nextChapter">
+            <span class="nav-copy"
+              ><span class="nav-label">下一章</span
+              ><span class="nav-title" id="nextTitle"></span></span
+            ><svg class="icon"><use href="#i-right" /></svg>
+          </button>
+        </nav>
+        <footer class="reader-footer">慢慢读，不着急。</footer>
+      </div>
+    </main>
+
+    <div class="floating-tools">
+      <button
+        class="float-button"
+        id="backTop"
+        aria-label="返回顶部"
+        title="返回顶部"
+      >
+        <svg class="icon"><use href="#i-up" /></svg>
+      </button>
+      <button
+        class="float-button"
+        id="floatingToc"
+        aria-label="章节目录"
+        title="章节目录"
+      >
+        <svg class="icon"><use href="#i-list" /></svg>
+      </button>
+    </div>
+
+    <section class="popover" id="settingsPanel" aria-label="阅读设置" hidden>
+      <div class="popover-head">
+        <h2>阅读设置</h2>
+        <button
+          class="icon-button"
+          id="closeSettings"
+          aria-label="关闭阅读设置"
+        >
+          <svg class="icon"><use href="#i-close" /></svg>
+        </button>
+      </div>
+      <div class="setting-row">
+        <div class="setting-label"><span>正文字号</span></div>
+        <div class="font-controls">
+          <button id="fontMinus" aria-label="减小字号">
+            <svg class="icon"><use href="#i-minus" /></svg></button
+          ><output id="fontValue">19 像素</output
+          ><button id="fontPlus" aria-label="增大字号">
+            <svg class="icon"><use href="#i-plus" /></svg>
+          </button>
+        </div>
+      </div>
+      <div class="setting-row">
+        <div class="setting-label"><span>行距</span></div>
+        <div class="segmented" id="lineOptions">
+          <button data-value="1.8">紧凑</button
+          ><button data-value="2.05" class="active">舒适</button
+          ><button data-value="2.3">宽松</button>
+        </div>
+      </div>
+      <div class="setting-row">
+        <div class="setting-label"><span>版心宽度</span></div>
+        <div class="segmented" id="widthOptions">
+          <button data-value="620">窄</button
+          ><button data-value="720" class="active">标准</button
+          ><button data-value="820">宽</button>
+        </div>
+      </div>
+      <p class="setting-note">偏好会自动保存。夜间模式可点击顶栏的月亮图标。</p>
+    </section>
+
+    <div class="modal-backdrop" id="searchModal" hidden>
+      <section
+        class="search-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="searchLabel"
+      >
+        <div class="search-input-wrap">
+          <svg class="icon"><use href="#i-search" /></svg
+          ><input
+            id="searchInput"
+            type="search"
+            autocomplete="off"
+            placeholder="输入人物、地点或剧情关键词"
+            aria-label="搜索全文"
+          /><button class="key-button" id="closeSearch">Esc</button>
+        </div>
+        <div class="search-status" id="searchLabel">在全部章节中查找</div>
+        <div class="search-results" id="searchResults">
+          <div class="search-empty">
+            <svg class="icon"><use href="#i-book" /></svg
+            >从一个名字开始<br />例如：林然、檀宫、瑞士
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <div class="toast" id="toast" role="status"></div>
+    <script id="book-data" type="application/json">{
+  "title": "markdown转网页",
+  "description": "md2html是一款可以将markdown文档一键转为HTML网页的工具，进一步方便阅读md文档，支持多种md格式：加粗、斜体、行内代码、代码块、引用、列表、表格、图片等。",
+  "eyebrow": "md2html"
+}</script>
+    <script id="novel-data" type="application/json">[
+  {
+    "id": "示例",
+    "name": "示例.md",
+    "content": "# 示例章节\n\n这是一个用来演示渲染效果的 Markdown 文件，运行 `python build.py` 后即可在浏览器中查看。\n\n## 一、段落与行内格式\n\n普通段落中可以使用**加粗**强调重点，也可以用*斜体*表示轻声的补充说明。行内代码如 `python build.py` 会以等宽字体显示。\n\n段落中还可以放置[外部链接](https://example.com)，链接在新标签页打开。\n\n---\n\n## 二、代码块\n\n用三个反引号包裹代码块，并标注语言：\n\n```python\ndef build(chapters):\n    payload = json.dumps(chapters, ensure_ascii=False)\n    return template.replace(\"{{NOVEL_DATA}}\", payload)\n```\n\n没有标注语言时按纯文本显示：\n\n```\n阅读进度与设置仅保存在本机\n```\n\n## 三、引用\n\n> 用于引述他人的话，或突出强调一段内容。\n> 引用块中的多行会合并显示。\n\n## 四、列表\n\n无序列表：\n\n- 左侧目录列出全部章节\n- 全文搜索支持关键词高亮\n- 阅读进度与位置自动保存\n- 支持字号、行距与主题切换\n\n有序列表：\n\n1. 把 Markdown 文件放进 `content` 目录\n2. 运行 `python build.py`\n3. 打开 `index.generated.html`\n\n## 五、表格\n\n| 参数 | 说明 | 默认值 |\n| --- | --- | --- |\n| `--content` | Markdown 文件或目录 | `content/` |\n| `--split` | 按标题拆分成多章 | 关闭 |\n| `--title` | 覆盖书名 | 配置文件 |\n| `--force` | 覆盖已有输出 | 关闭 |\n\n## 六、图片\n\n使用 Markdown 图片语法，图片宽度自适应版心，不会溢出：\n\n![示例图片](https://placehold.co/900x360/png)\n\n## 七、分隔线\n\n上方是二级标题，这里用分隔线另起一段：\n\n---\n\n以上覆盖了标题、段落、加粗、斜体、行内代码、代码块、引用、列表、表格、图片、链接和分隔线。\n"
+  }
+]</script>
+
+    <script>
+      (() => {
+        "use strict";
+        const $ = (id) => document.getElementById(id);
+        const STORAGE_KEY = "quiet-study-reader-v1";
+        const chineseNumbers = [
+          "零",
+          "壹",
+          "贰",
+          "叁",
+          "肆",
+          "伍",
+          "陆",
+          "柒",
+          "捌",
+          "玖",
+          "拾",
+        ];
+        let book = { title: "未命名文档", description: "", eyebrow: "文档" };
+        let chapters = [];
+        let current = 0;
+        let lastFocus = null;
+        let searchMatches = [];
+        let activeMatch = -1;
+        let toastTimer;
+        let saveTimer;
+        let preferences = {
+          font: 19,
+          line: 2.05,
+          width: 720,
+          theme: "night",
+          chapter: 0,
+          positions: {},
+        };
+
+        try {
+          preferences = {
+            ...preferences,
+            ...JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}"),
+          };
+        } catch (_) {
+          /* 本地存储不可用时保持默认设置 */
+        }
+        const persist = () => {
+          try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(preferences));
+          } catch (_) {
+            /* 隐私模式下不阻断阅读 */
+          }
+        };
+        const escapeHTML = (text) =>
+          text.replace(
+            /[&<>"']/g,
+            (c) =>
+              ({
+                "&": "&amp;",
+                "<": "&lt;",
+                ">": "&gt;",
+                '"': "&quot;",
+                "'": "&#39;",
+              })[c],
+          );
+        const icon = (name) =>
+          `<svg class="icon" aria-hidden="true"><use href="#i-${name}"/></svg>`;
+        const countWords = (text) => [...text.replace(/\s/g, "")].length;
+        const plainText = (markdown) =>
+          markdown
+            .replace(/^#{1,6}\s+/gm, "")
+            .replace(/[*_>`#\[\]]/g, "")
+            .replace(/\n/g, " ");
+        const readingMinutes = (text) =>
+          Math.max(1, Math.ceil(countWords(plainText(text)) / 450));
+
+        function inlineMarkdown(text) {
+          let safe = escapeHTML(text);
+          safe = safe.replace(/`([^`]+)`/g, "<code>$1</code>");
+          safe = safe.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+          safe = safe.replace(/__([^_]+)__/g, "<strong>$1</strong>");
+          safe = safe.replace(/(?<![*\w])\*([^*\n]+)\*(?!\*)/g, "<em>$1</em>");
+          safe = safe.replace(
+            /!\[([^\]]*)\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g,
+            '<img src="$2" alt="$1" loading="lazy" />',
+          );
+          safe = safe.replace(
+            /\[([^\]]+)\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g,
+            '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>',
+          );
+          return safe;
+        }
+
+        function renderMarkdown(markdown) {
+          const lines = markdown.replace(/\r\n?/g, "\n").split("\n");
+          const html = [];
+          let paragraph = [];
+          let listType = null;
+          let inCode = false;
+          let codeLines = [];
+          let tableRows = null;
+          const flushParagraph = () => {
+            if (!paragraph.length) return;
+            const text = paragraph.join(" ").trim();
+            const dialogue = /^[\"“‘]/.test(text) ? ' class="dialogue"' : "";
+            html.push(`<p${dialogue}>${inlineMarkdown(text)}</p>`);
+            paragraph = [];
+          };
+          const closeList = () => {
+            if (listType) {
+              html.push(`</${listType}>`);
+              listType = null;
+            }
+          };
+          const closeTable = () => {
+            if (!tableRows) return;
+            const [head, ...body] = tableRows;
+            html.push(
+              `<div class="table-wrap"><table><thead><tr>${head
+                .map((cell) => `<th>${inlineMarkdown(cell)}</th>`)
+                .join("")}</tr></thead><tbody>${body
+                .map(
+                  (row) =>
+                    `<tr>${row.map((cell) => `<td>${inlineMarkdown(cell)}</td>`).join("")}</tr>`,
+                )
+                .join("")}</tbody></table></div>`,
+            );
+            tableRows = null;
+          };
+          const isTableRow = (line) => /\|.*\|/.test(line) && line.includes("|");
+          for (const line of lines) {
+            if (line.trim().startsWith("```")) {
+              if (inCode) {
+                html.push(
+                  `<pre><code>${escapeHTML(codeLines.join("\n"))}</code></pre>`,
+                );
+                codeLines = [];
+                inCode = false;
+              } else {
+                flushParagraph();
+                closeList();
+                closeTable();
+                inCode = true;
+              }
+              continue;
+            }
+            if (inCode) {
+              codeLines.push(line);
+              continue;
+            }
+            if (!line.trim()) {
+              flushParagraph();
+              closeList();
+              closeTable();
+              continue;
+            }
+            if (isTableRow(line)) {
+              flushParagraph();
+              closeList();
+              const cells = line
+                .trim()
+                .replace(/^\|/, "")
+                .replace(/\|$/, "")
+                .split("|")
+                .map((cell) => cell.trim());
+              if (/^[\s|:-]+$/.test(line) && cells.every((cell) => /^:?-+:?$/.test(cell)))
+                continue;
+              if (!tableRows) tableRows = [cells];
+              else tableRows.push(cells);
+              continue;
+            }
+            closeTable();
+            const heading = line.match(/^(#{1,6})\s+(.+)$/);
+            if (heading) {
+              flushParagraph();
+              closeList();
+              if (heading[1].length > 1)
+                html.push(
+                  `<h${heading[1].length}>${inlineMarkdown(heading[2])}</h${heading[1].length}>`,
+                );
+              continue;
+            }
+            if (/^\s*([-*_])(\s*\1){2,}\s*$/.test(line)) {
+              flushParagraph();
+              closeList();
+              html.push("<hr>");
+              continue;
+            }
+            const quote = line.match(/^>\s?(.*)$/);
+            if (quote) {
+              flushParagraph();
+              closeList();
+              html.push(`<blockquote>${inlineMarkdown(quote[1])}</blockquote>`);
+              continue;
+            }
+            const list = line.match(/^\s*([-+*]|\d+[.)])\s+(.+)$/);
+            if (list) {
+              flushParagraph();
+              const type = /^\d/.test(list[1]) ? "ol" : "ul";
+              if (listType !== type) {
+                closeList();
+                listType = type;
+                html.push(`<${type}>`);
+              }
+              html.push(`<li>${inlineMarkdown(list[2])}</li>`);
+              continue;
+            }
+            closeList();
+            paragraph.push(line.trim());
+          }
+          if (inCode)
+            html.push(
+              `<pre><code>${escapeHTML(codeLines.join("\n"))}</code></pre>`,
+            );
+          flushParagraph();
+          closeList();
+          closeTable();
+          return html.join("\n");
+        }
+
+        function normalizeChapter(file, index) {
+          const source = file.content.replace(/\r\n?/g, "\n").trim();
+          const heading = source.match(/^#{1,3}\s+(.+)$/m);
+          const fullTitle = heading
+            ? heading[1].trim()
+            : file.name.replace(/\.(md|markdown|txt)$/i, "");
+          const dayMatch = fullTitle.match(/第([一二三四五六七八九十百\d]+)天/);
+          const title = fullTitle
+            .replace(/^第[一二三四五六七八九十百\d]+章[：:]\s*/, "")
+            .replace(/[（(]第[一二三四五六七八九十百\d]+天[）)]\s*$/, "")
+            .trim();
+          return {
+            id: file.id || `chapter-${index + 1}`,
+            name: file.name || `第${index + 1}章.md`,
+            content: source,
+            fullTitle,
+            title,
+            day: dayMatch ? dayMatch[0] : `第 ${index + 1} 篇`,
+            words: countWords(source),
+            minutes: readingMinutes(source),
+          };
+        }
+
+        function loadEmbedded() {
+          try {
+            const meta = JSON.parse($("book-data").textContent);
+            book = { ...book, ...meta };
+          } catch (_) {
+            /* 书籍信息缺失时使用默认值，不影响正文渲染 */
+          }
+          applyBookInfo();
+          try {
+            const data = JSON.parse($("novel-data").textContent);
+            chapters = data.map(normalizeChapter);
+          } catch (error) {
+            chapters = [];
+            $("article").innerHTML =
+              '<div class="search-empty">正文未能载入。请使用顶栏“导入”选择 Markdown 文件。</div>';
+            showToast("正文载入失败，请导入 Markdown 文件");
+          }
+        }
+
+        function applyBookInfo() {
+          if (book.title) $("bookTitle").textContent = book.title;
+          if (book.description) $("bookDescription").textContent = book.description;
+          if (book.eyebrow) document.querySelector(".eyebrow").textContent = book.eyebrow;
+          document.title = `${book.title} · 静谧书房`;
+        }
+
+        function buildToc() {
+          $("toc").innerHTML = chapters
+            .map(
+              (chapter, index) =>
+                `<li><button data-chapter="${index}" ${index === current ? 'aria-current="page"' : ""}><span class="toc-number">${String(index + 1).padStart(2, "0")}</span><span><span class="toc-title">${escapeHTML(chapter.title)}</span><span class="toc-day">${escapeHTML(chapter.day)} · ${chapter.words.toLocaleString("zh-CN")} 字</span></span></button></li>`,
+            )
+            .join("");
+          $("toc")
+            .querySelectorAll("button")
+            .forEach((button) =>
+              button.addEventListener("click", () => {
+                openChapter(Number(button.dataset.chapter));
+                closeSidebar();
+              }),
+            );
+          $("totalChapters").textContent = chapters.length;
+          $("totalMinutes").textContent = chapters.reduce(
+            (sum, c) => sum + c.minutes,
+            0,
+          );
+          if (chapters.length)
+            $("tocRange").textContent =
+              `${chapters[0].day} — ${chapters[chapters.length - 1].day}`;
+        }
+
+        function openChapter(index, restore = false) {
+          if (!chapters.length || index < 0 || index >= chapters.length) return;
+          current = index;
+          const chapter = chapters[index];
+          preferences.chapter = index;
+          $("chapterSeal").textContent =
+            chineseNumbers[index + 1] || String(index + 1);
+          $("chapterKicker").textContent = chapter.day;
+          $("chapterTitle").textContent = chapter.title;
+          $("chapterWords").textContent =
+            `${chapter.words.toLocaleString("zh-CN")} 字`;
+          $("chapterTime").textContent = `约 ${chapter.minutes} 分钟`;
+          $("article").innerHTML = renderMarkdown(chapter.content);
+          document.title = `${chapter.title} · ${book.title}`;
+          buildToc();
+          const previous = chapters[index - 1],
+            next = chapters[index + 1];
+          $("prevChapter").disabled = !previous;
+          $("nextChapter").disabled = !next;
+          $("prevTitle").textContent = previous
+            ? previous.title
+            : "已经是第一章";
+          $("nextTitle").textContent = next ? next.title : "等待后续更新";
+          $("nextChapter").querySelector(".nav-label").textContent = next
+            ? "下一章"
+            : "连载中";
+          window.scrollTo(0, 0);
+          if (restore && preferences.positions[chapter.id])
+            requestAnimationFrame(() =>
+              window.scrollTo(0, preferences.positions[chapter.id]),
+            );
+          updateProgress();
+          persist();
+        }
+
+        function updateProgress() {
+          const max =
+            document.documentElement.scrollHeight - window.innerHeight;
+          const percent =
+            max > 0
+              ? Math.min(100, Math.max(0, (window.scrollY / max) * 100))
+              : 0;
+          $("progressBar").style.width = `${percent}%`;
+          $("backTop").classList.toggle("visible", window.scrollY > 500);
+        }
+
+        function showToast(message) {
+          clearTimeout(toastTimer);
+          $("toast").textContent = message;
+          $("toast").classList.add("show");
+          toastTimer = setTimeout(
+            () => $("toast").classList.remove("show"),
+            2600,
+          );
+        }
+
+        function applyPreferences() {
+          const root = document.documentElement;
+          root.style.setProperty("--font-size", `${preferences.font}px`);
+          root.style.setProperty("--line-height", preferences.line);
+          root.style.setProperty("--reader-width", `${preferences.width}px`);
+          root.dataset.theme = preferences.theme;
+          $("fontValue").textContent = `${preferences.font} 像素`;
+          $("themeIcon").setAttribute(
+            "href",
+            preferences.theme === "night" ? "#i-sun" : "#i-moon",
+          );
+          $("themeToggle").setAttribute(
+            "aria-label",
+            preferences.theme === "night" ? "切换日间模式" : "切换夜间模式",
+          );
+          document.querySelector('meta[name="theme-color"]').content =
+            preferences.theme === "night" ? "#0b151a" : "#12262e";
+          document
+            .querySelectorAll("#lineOptions button")
+            .forEach((b) =>
+              b.classList.toggle(
+                "active",
+                Number(b.dataset.value) === Number(preferences.line),
+              ),
+            );
+          document
+            .querySelectorAll("#widthOptions button")
+            .forEach((b) =>
+              b.classList.toggle(
+                "active",
+                Number(b.dataset.value) === Number(preferences.width),
+              ),
+            );
+          $("fontMinus").disabled = preferences.font <= 16;
+          $("fontPlus").disabled = preferences.font >= 26;
+        }
+
+        function toggleSettings(force) {
+          const open =
+            typeof force === "boolean" ? force : $("settingsPanel").hidden;
+          $("settingsPanel").hidden = !open;
+          $("settingsButton").setAttribute("aria-expanded", String(open));
+        }
+        function openSidebar() {
+          $("sidebar").classList.add("open");
+          $("sidebarBackdrop").hidden = false;
+          $("menuButton").setAttribute("aria-expanded", "true");
+          document.body.classList.add("no-scroll");
+        }
+        function closeSidebar() {
+          $("sidebar").classList.remove("open");
+          $("sidebarBackdrop").hidden = true;
+          $("menuButton").setAttribute("aria-expanded", "false");
+          document.body.classList.remove("no-scroll");
+        }
+
+        function openSearch() {
+          lastFocus = document.activeElement;
+          toggleSettings(false);
+          $("searchModal").hidden = false;
+          document.body.classList.add("no-scroll");
+          $("searchInput").focus();
+          $("searchInput").select();
+        }
+        function closeSearch() {
+          $("searchModal").hidden = true;
+          document.body.classList.remove("no-scroll");
+          if (lastFocus) lastFocus.focus();
+        }
+        function runSearch() {
+          const query = $("searchInput").value.trim();
+          if (!query) {
+            searchMatches = [];
+            activeMatch = -1;
+            $("searchLabel").textContent = "在全部章节中查找";
+            $("searchResults").innerHTML =
+              `<div class="search-empty">${icon("book")}从一个名字开始<br>例如：林然、檀宫、瑞士</div>`;
+            return;
+          }
+          const lowerQuery = query.toLocaleLowerCase();
+          searchMatches = [];
+          chapters.forEach((chapter, chapterIndex) => {
+            chapter.content
+              .split(/\n+/)
+              .forEach((paragraph, paragraphIndex) => {
+                const clean = plainText(paragraph);
+                const position = clean.toLocaleLowerCase().indexOf(lowerQuery);
+                if (position !== -1)
+                  searchMatches.push({
+                    chapterIndex,
+                    paragraphIndex,
+                    text: clean,
+                    position,
+                    query,
+                  });
+              });
+          });
+          activeMatch = searchMatches.length ? 0 : -1;
+          $("searchLabel").textContent = searchMatches.length
+            ? `找到 ${searchMatches.length} 处相关段落`
+            : `没有找到“${query}”`;
+          if (!searchMatches.length) {
+            $("searchResults").innerHTML =
+              `<div class="search-empty">${icon("search")}换个关键词试试<br>可搜索人物、地点或一句对白</div>`;
+            return;
+          }
+          $("searchResults").innerHTML =
+            searchMatches
+              .slice(0, 80)
+              .map((match, index) => {
+                const start = Math.max(0, match.position - 30),
+                  end = Math.min(
+                    match.text.length,
+                    match.position + query.length + 65,
+                  );
+                const snippet = `${start ? "…" : ""}${match.text.slice(start, end)}${end < match.text.length ? "…" : ""}`;
+                return `<button class="search-result ${index === 0 ? "active" : ""}" data-match="${index}"><span class="result-chapter">${escapeHTML(chapters[match.chapterIndex].fullTitle)}</span><span class="result-text">${escapeHTML(snippet).replace(new RegExp(escapeRegExp(escapeHTML(query)), "gi"), (m) => `<mark>${m}</mark>`)}</span></button>`;
+              })
+              .join("") +
+            (searchMatches.length > 80
+              ? '<div class="search-status">仅显示前 80 处结果，请输入更精确的关键词</div>'
+              : "");
+          $("searchResults")
+            .querySelectorAll(".search-result")
+            .forEach((button) =>
+              button.addEventListener("click", () =>
+                goToMatch(Number(button.dataset.match)),
+              ),
+            );
+        }
+        const escapeRegExp = (text) =>
+          text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        function goToMatch(index) {
+          const match = searchMatches[index];
+          if (!match) return;
+          const changingChapter = current !== match.chapterIndex;
+          if (changingChapter) openChapter(match.chapterIndex);
+          closeSearch();
+          const target = [
+            ...$("article").querySelectorAll("p, li, blockquote, h2, h3, h4"),
+          ].find((element) =>
+            element.textContent
+              .toLocaleLowerCase()
+              .includes(match.query.toLocaleLowerCase()),
+          );
+          if (!target) {
+            showToast("已打开对应章节");
+            return;
+          }
+          const original = target.textContent;
+          const at = original
+            .toLocaleLowerCase()
+            .indexOf(match.query.toLocaleLowerCase());
+          if (at !== -1) {
+            target.textContent = "";
+            target.append(document.createTextNode(original.slice(0, at)));
+            const mark = document.createElement("mark");
+            mark.textContent = original.slice(at, at + match.query.length);
+            target.append(
+              mark,
+              document.createTextNode(original.slice(at + match.query.length)),
+            );
+          }
+          target.scrollIntoView({ behavior: "smooth", block: "center" });
+          target.setAttribute("tabindex", "-1");
+          target.focus({ preventScroll: true });
+        }
+
+        async function importFiles(event) {
+          const files = [...event.target.files];
+          if (!files.length) return;
+          try {
+            const imported = await Promise.all(
+              files.map(async (file) => ({
+                id: `import-${file.name}-${file.lastModified}`,
+                name: file.name,
+                content: await file.text(),
+              })),
+            );
+            if (imported.some((file) => !file.content.trim()))
+              throw new Error("empty");
+            chapters = imported.map(normalizeChapter);
+            preferences.positions = {};
+            current = 0;
+            openChapter(0);
+            showToast(`已导入 ${chapters.length} 个文件，仅在本页显示`);
+          } catch (_) {
+            showToast("导入失败，请选择非空的 UTF-8 Markdown 文件");
+          }
+          event.target.value = "";
+        }
+
+        $("prevChapter").addEventListener("click", () =>
+          openChapter(current - 1),
+        );
+        $("nextChapter").addEventListener("click", () =>
+          openChapter(current + 1),
+        );
+        $("brandHome").addEventListener("click", () =>
+          window.scrollTo({ top: 0, behavior: "smooth" }),
+        );
+        $("backTop").addEventListener("click", () =>
+          window.scrollTo({ top: 0, behavior: "smooth" }),
+        );
+        $("menuButton").addEventListener("click", openSidebar);
+        $("floatingToc").addEventListener("click", () => {
+          if (window.innerWidth <= 760) {
+            openSidebar();
+            return;
+          }
+          const active = $("toc").querySelector('[aria-current="page"]');
+          if (active)
+            active.scrollIntoView({ behavior: "smooth", block: "center" });
+          showToast("章节目录位于页面左侧");
+        });
+        $("sidebarBackdrop").addEventListener("click", closeSidebar);
+        $("settingsButton").addEventListener("click", () => toggleSettings());
+        $("closeSettings").addEventListener("click", () =>
+          toggleSettings(false),
+        );
+        $("themeToggle").addEventListener("click", () => {
+          preferences.theme = preferences.theme === "night" ? "light" : "night";
+          applyPreferences();
+          persist();
+        });
+        $("fontMinus").addEventListener("click", () => {
+          preferences.font = Math.max(16, preferences.font - 1);
+          applyPreferences();
+          persist();
+        });
+        $("fontPlus").addEventListener("click", () => {
+          preferences.font = Math.min(26, preferences.font + 1);
+          applyPreferences();
+          persist();
+        });
+        $("lineOptions").addEventListener("click", (e) => {
+          if (e.target.dataset.value) {
+            preferences.line = Number(e.target.dataset.value);
+            applyPreferences();
+            persist();
+          }
+        });
+        $("widthOptions").addEventListener("click", (e) => {
+          if (e.target.dataset.value) {
+            preferences.width = Number(e.target.dataset.value);
+            applyPreferences();
+            persist();
+          }
+        });
+        $("searchButton").addEventListener("click", openSearch);
+        $("closeSearch").addEventListener("click", closeSearch);
+        $("searchModal").addEventListener("click", (e) => {
+          if (e.target === $("searchModal")) closeSearch();
+        });
+        let searchDebounce;
+        $("searchInput").addEventListener("input", () => {
+          clearTimeout(searchDebounce);
+          searchDebounce = setTimeout(runSearch, 100);
+        });
+        $("searchInput").addEventListener("keydown", (e) => {
+          if (e.key === "Enter" && searchMatches.length) {
+            e.preventDefault();
+            goToMatch(activeMatch >= 0 ? activeMatch : 0);
+          }
+          if (e.key === "ArrowDown" && searchMatches.length) {
+            e.preventDefault();
+            activeMatch = Math.min(searchMatches.length - 1, activeMatch + 1);
+            highlightMatch();
+          }
+          if (e.key === "ArrowUp" && searchMatches.length) {
+            e.preventDefault();
+            activeMatch = Math.max(0, activeMatch - 1);
+            highlightMatch();
+          }
+        });
+        function highlightMatch() {
+          $("searchResults")
+            .querySelectorAll(".search-result")
+            .forEach((b, i) => b.classList.toggle("active", i === activeMatch));
+          const active = $("searchResults").querySelector(
+            ".search-result.active",
+          );
+          if (active) active.scrollIntoView({ block: "nearest" });
+        }
+        $("importButton").addEventListener("click", () =>
+          $("fileInput").click(),
+        );
+        $("fileInput").addEventListener("change", importFiles);
+        document.addEventListener("click", (e) => {
+          if (
+            !$("settingsPanel").hidden &&
+            !$("settingsPanel").contains(e.target) &&
+            !$("settingsButton").contains(e.target)
+          )
+            toggleSettings(false);
+        });
+        document.addEventListener("keydown", (e) => {
+          if ((e.ctrlKey || e.metaKey) && e.key.toLocaleLowerCase() === "k") {
+            e.preventDefault();
+            $("searchModal").hidden ? openSearch() : closeSearch();
+          }
+          if (e.key === "Escape") {
+            if (!$("searchModal").hidden) closeSearch();
+            else {
+              toggleSettings(false);
+              closeSidebar();
+            }
+          }
+          if (e.key === "Tab" && !$("searchModal").hidden) {
+            const focusables = [
+              ...$("searchModal").querySelectorAll("input, button"),
+            ];
+            const first = focusables[0],
+              last = focusables[focusables.length - 1];
+            if (e.shiftKey && document.activeElement === first) {
+              e.preventDefault();
+              last.focus();
+            } else if (!e.shiftKey && document.activeElement === last) {
+              e.preventDefault();
+              first.focus();
+            }
+          }
+        });
+        window.addEventListener(
+          "scroll",
+          () => {
+            updateProgress();
+            clearTimeout(saveTimer);
+            saveTimer = setTimeout(() => {
+              if (chapters[current]) {
+                preferences.positions[chapters[current].id] = window.scrollY;
+                persist();
+              }
+            }, 180);
+          },
+          { passive: true },
+        );
+        window.addEventListener("resize", () => {
+          if (window.innerWidth > 760) closeSidebar();
+        });
+
+        loadEmbedded();
+        applyPreferences();
+        if (chapters.length)
+          openChapter(Math.min(preferences.chapter, chapters.length - 1), true);
+        else buildToc();
+      })();
+    </script>
+  </body>
+</html>
